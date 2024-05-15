@@ -16,7 +16,7 @@ class _MapPageState extends State<MapPage> {
   final Completer<GoogleMapController> _mapController =
   Completer<GoogleMapController>();
   static const LatLng _pGooglePlex =
-  LatLng(6.499612618473192, 124.84422050314143);
+  LatLng(6.485651218461966, 124.85593053388185);
   LatLng? _currentP;
 
   @override
@@ -38,7 +38,7 @@ class _MapPageState extends State<MapPage> {
             _mapController.complete(controller)),
         initialCameraPosition: CameraPosition(
           target: _pGooglePlex,
-          zoom: 10,
+          //zoom: 5,
         ),
         markers: {
           Marker(
@@ -61,7 +61,7 @@ class _MapPageState extends State<MapPage> {
     final GoogleMapController controller = await _mapController.future;
     CameraPosition _newCameraPosition = CameraPosition(
       target: pos,
-      zoom: 20,
+      zoom: 10,
     );
     await controller
         .animateCamera(CameraUpdate.newCameraPosition(_newCameraPosition));

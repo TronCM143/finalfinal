@@ -12,7 +12,12 @@
           "package_name": "com.example.mapa"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1024851096672-dbhct35vi3img5lmf7hh6uk5ug8bsa79.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBZIpbXnHqXgooH85TIAORsPRg8I6mKj9E"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1024851096672-dbhct35vi3img5lmf7hh6uk5ug8bsa79.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
