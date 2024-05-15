@@ -39,7 +39,10 @@ class _HomePageState extends State<HomePage> {
       ]),
       //body:indexedStack(children: navigationList, index: myIndex,) sunod kung kayo na ang map
       body: Center(
-        child: navigationList[myIndex],
+        child: IndexedStack(
+          children: navigationList,
+          index: myIndex,
+        ),
       ),
       bottomNavigationBar: CurvedNavigationBar(
         backgroundColor: Colors.transparent,
