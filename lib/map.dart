@@ -14,15 +14,17 @@ class MapPage extends StatefulWidget {
 class _MapPageState extends State<MapPage> {
   Location _locationController = Location();
   final Completer<GoogleMapController> _mapController = Completer<GoogleMapController>();
-  static const LatLng _pGooglePlex = LatLng(6.485651218461966, 124.85593053388185);
+
   LatLng? _currentP;
-  List<String> _uids = [];
-  String? _selectedUid;
+  List<DocumentSnapshot> _users = [];
+  LatLng? _selectedLocation;
+  static const LatLng _pGooglePlex = LatLng(6.485651218461966, 124.85593053388185);
 
   @override
   void initState() {
     super.initState();
-    getLocationUpdates();
+    _getLocationUpdates();
+    _fetchUsersFromFirestore();
   }
 
   @override
@@ -40,43 +42,67 @@ class _MapPageState extends State<MapPage> {
             child: Text('Select Entity'),
           ),
           Expanded(
-            child: _currentP == null
-                ? Center(child: CircularProgressIndicator())
-                : GoogleMap(
-                    onMapCreated: ((GoogleMapController controller) => _mapController.complete(controller)),
-                    initialCameraPosition: CameraPosition(
-                      target: _pGooglePlex,
-                    ),
-                    markers: {
-                      Marker(
-                        markerId: MarkerId("_currentLocation"),
-                        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-                        position: _currentP!,
-                      ),
-                      if (_selectedUid != null)
-                        Marker(
-                          markerId: MarkerId(_selectedUid!),
-                          icon: BitmapDescriptor.defaultMarker,
-                          position: _currentP!,
-                        ),
-                    },
-                  ),
+            child: GoogleMap(
+              onMapCreated: (GoogleMapController controller) => _mapController.complete(controller),
+              initialCameraPosition: const CameraPosition(
+                target: _pGooglePlex,
+                zoom: 10,
+              ),
+              markers: _buildMarkers(),
+            ),
           ),
         ],
       ),
     );
   }
 
+  Set<Marker> _buildMarkers() {
+    Set<Marker> markers = {};
+
+    if (_currentP != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId("_currentLocation"),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          position: _currentP!,
+        ),
+      );
+    }
+
+    if (_selectedLocation != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId("_selectedLocation"),
+          icon: BitmapDescriptor.defaultMarker,
+          position: _selectedLocation!,
+        ),
+      );
+    }
+
+    return markers;
+  }
+
   Future<void> _cameraToPosition(LatLng pos) async {
     final GoogleMapController controller = await _mapController.future;
     CameraPosition _newCameraPosition = CameraPosition(
       target: pos,
-      zoom: 10,
+      zoom: 13,
     );
     await controller.animateCamera(CameraUpdate.newCameraPosition(_newCameraPosition));
   }
 
-  Future<void> getLocationUpdates() async {
+  Future<void> _fetchUsersFromFirestore() async {
+    try {
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('users').get();
+      setState(() {
+        _users = querySnapshot.docs;
+      });
+    } catch (e) {
+      print('Error fetching users: $e');
+    }
+  }
+
+  Future<void> _getLocationUpdates() async {
     bool _serviceEnabled;
     PermissionStatus _permissionGranted;
 
@@ -121,16 +147,13 @@ class _MapPageState extends State<MapPage> {
           title: Text('Select Entity'),
           content: SingleChildScrollView(
             child: ListBody(
-              children: _uids.map((uid) {
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedUid = uid;
-                    });
+              children: _users.map((user) {
+                return TextButton(
+                  onPressed: () {
                     Navigator.pop(context);
-                    _fetchLocationFromFirestore(uid);
+                    _fetchLocationFromFirestore(user.id);
                   },
-                  child: Text(uid),
+                  child: Text(user.id),
                 );
               }).toList(),
             ),
@@ -144,14 +167,15 @@ class _MapPageState extends State<MapPage> {
     try {
       DocumentSnapshot docSnapshot = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (docSnapshot.exists) {
-        var locationData = (docSnapshot.data() as Map<String, dynamic>)['location'];
+        var locationData = (docSnapshot.data() as Map<String, dynamic>)['location'] as GeoPoint;
         if (locationData != null) {
-          double latitude = locationData['latitude'];
-          double longitude = locationData['longitude'];
+          double latitude = locationData.latitude;
+          double longitude = locationData.longitude;
+          LatLng newLocation = LatLng(latitude, longitude);
           setState(() {
-            _currentP = LatLng(latitude, longitude);
-            _cameraToPosition(_currentP!);
+            _selectedLocation = newLocation; // Set selectedLocation to the fetched location
           });
+          _cameraToPosition(newLocation);
         }
       }
     } catch (e) {
