@@ -5,7 +5,7 @@ import 'package:location/location.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MapPage extends StatefulWidget {
-  const MapPage({super.key});
+  const MapPage({Key? key}) : super(key: key);
 
   @override
   State<MapPage> createState() => _MapPageState();
@@ -13,12 +13,14 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage> {
   final Location _locationController = Location();
-  final Completer<GoogleMapController> _mapController = Completer<GoogleMapController>();
+  final Completer<GoogleMapController> _mapController =
+      Completer<GoogleMapController>();
 
   LatLng? _currentP;
   List<DocumentSnapshot> _users = [];
   LatLng? _selectedLocation;
-  static const LatLng _pGooglePlex = LatLng(6.485651218461966, 124.85593053388185);
+  static const LatLng _pGooglePlex =
+      LatLng(6.485651218461966, 124.85593053388185);
 
   @override
   void initState() {
@@ -43,7 +45,8 @@ class _MapPageState extends State<MapPage> {
           ),
           Expanded(
             child: GoogleMap(
-              onMapCreated: (GoogleMapController controller) => _mapController.complete(controller),
+              onMapCreated: (GoogleMapController controller) =>
+                  _mapController.complete(controller),
               initialCameraPosition: const CameraPosition(
                 target: _pGooglePlex,
                 zoom: 10,
@@ -63,7 +66,8 @@ class _MapPageState extends State<MapPage> {
       markers.add(
         Marker(
           markerId: const MarkerId("_currentLocation"),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           position: _currentP!,
         ),
       );
@@ -88,12 +92,14 @@ class _MapPageState extends State<MapPage> {
       target: pos,
       zoom: 13,
     );
-    await controller.animateCamera(CameraUpdate.newCameraPosition(_newCameraPosition));
+    await controller
+        .animateCamera(CameraUpdate.newCameraPosition(_newCameraPosition));
   }
 
   Future<void> _fetchUsersFromFirestore() async {
     try {
-      QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('users').get();
+      QuerySnapshot querySnapshot =
+          await FirebaseFirestore.instance.collection('users').get();
       setState(() {
         _users = querySnapshot.docs;
       });
@@ -125,17 +131,38 @@ class _MapPageState extends State<MapPage> {
     }
 
     try {
-      _locationController.onLocationChanged.listen((LocationData currentLocation) {
-        if (currentLocation.latitude != null && currentLocation.longitude != null) {
+      _locationController.onLocationChanged
+          .listen((LocationData currentLocation) {
+        if (currentLocation.latitude != null &&
+            currentLocation.longitude != null) {
           setState(() {
-            _currentP = LatLng(currentLocation.latitude!, currentLocation.longitude!);
-            _cameraToPosition(_currentP!);
+            _currentP =
+                LatLng(currentLocation.latitude!, currentLocation.longitude!);
           });
+          _uploadLocationToFirestore(
+              currentLocation.latitude!, currentLocation.longitude!);
         }
       });
     } catch (e) {
       // Handle any errors that occur while listening for location updates
       print('Error getting location updates: $e');
+    }
+  }
+
+  Future<void> _uploadLocationToFirestore(
+      double latitude, double longitude) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc('current_location')
+          .set({
+        'latitude': latitude,
+        'longitude': longitude,
+      });
+      print('Location uploaded to Firestore');
+    } catch (e) {
+      // Handle errors here
+      print('Error uploading location to Firestore: $e');
     }
   }
 
@@ -165,15 +192,18 @@ class _MapPageState extends State<MapPage> {
 
   Future<void> _fetchLocationFromFirestore(String uid) async {
     try {
-      DocumentSnapshot docSnapshot = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      DocumentSnapshot docSnapshot =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (docSnapshot.exists) {
-        var locationData = (docSnapshot.data() as Map<String, dynamic>)['location'] as GeoPoint;
+        var locationData = (docSnapshot.data()
+            as Map<String, dynamic>)['location'] as GeoPoint;
         if (locationData != null) {
           double latitude = locationData.latitude;
           double longitude = locationData.longitude;
           LatLng newLocation = LatLng(latitude, longitude);
           setState(() {
-            _selectedLocation = newLocation; // Set selectedLocation to the fetched location
+            _selectedLocation =
+                newLocation; // Set selectedLocation to the fetched location
           });
           _cameraToPosition(newLocation);
         }
@@ -184,3 +214,4 @@ class _MapPageState extends State<MapPage> {
     }
   }
 }
+
