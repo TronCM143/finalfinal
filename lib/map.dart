@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' show cos, sqrt, asin;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
@@ -21,6 +22,7 @@ class _MapPageState extends State<MapPage> {
   LatLng? _selectedLocation;
   static const LatLng _pGooglePlex =
       LatLng(6.485651218461966, 124.85593053388185);
+  double _distance = 0.0;
 
   @override
   void initState() {
@@ -35,23 +37,50 @@ class _MapPageState extends State<MapPage> {
       appBar: AppBar(
         title: Text('Map'),
       ),
-      body: Column(
+      body: Stack(
         children: [
-          ElevatedButton(
-            onPressed: () {
-              _showEntityListDialog();
-            },
-            child: Text('Select Entity'),
+          GoogleMap(
+            onMapCreated: (GoogleMapController controller) =>
+                _mapController.complete(controller),
+            initialCameraPosition: const CameraPosition(
+              target: _pGooglePlex,
+              zoom: 10,
+            ),
+            markers: _buildMarkers(),
+            polylines: _buildPolylines(),
           ),
-          Expanded(
-            child: GoogleMap(
-              onMapCreated: (GoogleMapController controller) =>
-                  _mapController.complete(controller),
-              initialCameraPosition: const CameraPosition(
-                target: _pGooglePlex,
-                zoom: 10,
+          if (_distance != 0)
+            Positioned(
+              top: 16.0,
+              right: 16.0,
+              child: Container(
+                padding: EdgeInsets.all(8.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.5),
+                      spreadRadius: 2,
+                      blurRadius: 5,
+                      offset: Offset(0, 2), // changes position of shadow
+                    ),
+                  ],
+                ),
+                child: Text(
+                  'Distance: $_distance meters',
+                  style: TextStyle(fontSize: 16.0),
+                ),
               ),
-              markers: _buildMarkers(),
+            ),
+          Positioned(
+            bottom: 16.0,
+            left: 16.0,
+            child: ElevatedButton(
+              onPressed: () {
+                _showEntityListDialog();
+              },
+              child: Text('Select Entity'),
             ),
           ),
         ],
@@ -86,14 +115,39 @@ class _MapPageState extends State<MapPage> {
     return markers;
   }
 
+  Set<Polyline> _buildPolylines() {
+    Set<Polyline> polylines = {};
+
+    if (_currentP != null && _selectedLocation != null) {
+      List<LatLng> polylineCoordinates = [
+        _currentP!,
+        _selectedLocation!,
+      ];
+
+      Polyline polyline = Polyline(
+        polylineId: PolylineId('poly'),
+        color: Colors.blue,
+        points: polylineCoordinates,
+        width: 3,
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+      );
+
+      polylines.add(polyline);
+    }
+
+    return polylines;
+  }
+
   Future<void> _cameraToPosition(LatLng pos) async {
-    final GoogleMapController controller = await _mapController.future;
-    CameraPosition _newCameraPosition = CameraPosition(
-      target: pos,
-      zoom: 13,
-    );
-    await controller
-        .animateCamera(CameraUpdate.newCameraPosition(_newCameraPosition));
+    if (!_mapController.isCompleted) {
+      final GoogleMapController controller = await _mapController.future;
+      CameraPosition _newCameraPosition = CameraPosition(
+        target: pos,
+        zoom: 13,
+      );
+      await controller.animateCamera(CameraUpdate.newCameraPosition(_newCameraPosition));
+    }
   }
 
   Future<void> _fetchUsersFromFirestore() async {
@@ -141,6 +195,7 @@ class _MapPageState extends State<MapPage> {
           });
           _uploadLocationToFirestore(
               currentLocation.latitude!, currentLocation.longitude!);
+          _calculateDistance();
         }
       });
     } catch (e) {
@@ -213,5 +268,29 @@ class _MapPageState extends State<MapPage> {
       print('Error fetching location from Firestore: $e');
     }
   }
-}
 
+  // Calculate distance between two LatLng points
+  void _calculateDistance() {
+    if (_currentP != null && _selectedLocation != null) {
+      double distanceInMeters = _calculateDistanceInMeters(
+          _currentP!.latitude,
+          _currentP!.longitude,
+          _selectedLocation!.latitude,
+          _selectedLocation!.longitude);
+
+      setState(() {
+        _distance = distanceInMeters;
+      });
+    }
+  }
+
+  // Function to calculate distance between two LatLng points
+  double _calculateDistanceInMeters(
+      double lat1, double lon1, double lat2, double lon2) {
+    const double p = 0.017453292519943295; // Math.PI / 180
+    double a = 0.5 -
+        cos((lat2 - lat1) * p) / 2 +
+        cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lon2 - lon1) * p)) / 2;
+    return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
+  }
+}

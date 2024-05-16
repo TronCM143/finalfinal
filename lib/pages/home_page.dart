@@ -36,40 +36,56 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(backgroundColor: const Color(0xFF5BABCD), actions: [
-        IconButton(
-          onPressed: () => signUserOut(context),
-          icon: const Icon(
-            Icons.logout,
-          ),
-          
-        )
-      ]),
-      //body:indexedStack(children: navigationList, index: myIndex,) sunod kung kayo na ang map
-      body: Center(
-        child: IndexedStack(
-          children: navigationList,
-          index: myIndex,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 30,
+              child: IndexedStack(
+                index: myIndex,
+                children: navigationList,
+              ),
+            ),
+            Positioned(
+              bottom: 10,
+              left: 0,
+              right: 0,
+              child: SizedBox(
+                height: 25,
+                width: double.infinity,
+                child: Container(
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-      bottomNavigationBar: CurvedNavigationBar(
-        backgroundColor: Colors.transparent,
-        animationDuration: const Duration(milliseconds: 400),
-        color: const Color(0xFF5BABCD),
-        items: const [
-          Icon(
-            Icons.home,
-            size: 30,
-            color: Colors.white,
-          ),
-          Icon(Icons.devices, size: 30, color: Colors.white),
-          Icon(Icons.account_circle, size: 30, color: Colors.white),
-        ],
-        onTap: (index) {
-          setState(() {
-            myIndex = index;
-          });
-        },
+      bottomNavigationBar: SizedBox(
+        // Wrap CurvedNavigationBar with SizedBox
+        height: kBottomNavigationBarHeight,
+        child: CurvedNavigationBar(
+          backgroundColor: Colors.white,
+          animationDuration: const Duration(milliseconds: 400),
+          color: const Color(0xFF5BABCD),
+          items: const [
+            Icon(
+              Icons.home,
+              size: 30,
+              color: Colors.white,
+            ),
+            Icon(Icons.devices, size: 30, color: Colors.white),
+            Icon(Icons.account_circle, size: 30, color: Colors.white),
+          ],
+          onTap: (index) {
+            setState(() {
+              myIndex = index;
+            });
+          },
+        ),
       ),
     );
   }
