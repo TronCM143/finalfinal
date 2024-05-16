@@ -1,6 +1,7 @@
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:mapa/components/auth_page.dart';
 import 'package:mapa/pages/profile_pdage.dart';
 
 import '../map.dart';
@@ -13,8 +14,14 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-void signUserOut() {
+void signUserOut(BuildContext context) {
   FirebaseAuth.instance.signOut();
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+        builder: (context) =>
+            AuthPage()), // Replace AuthPage with your actual authentication page
+  );
 }
 
 class _HomePageState extends State<HomePage> {
@@ -24,17 +31,18 @@ class _HomePageState extends State<HomePage> {
     MapPage(),
     DevicesPage(),
     ProfilePage()
-    ];
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(backgroundColor: const Color(0xFF5BABCD), actions: const [
+      appBar: AppBar(backgroundColor: const Color(0xFF5BABCD), actions: [
         IconButton(
-          onPressed: signUserOut,
-          icon: Icon(
+          onPressed: () => signUserOut(context),
+          icon: const Icon(
             Icons.logout,
           ),
+          
         )
       ]),
       //body:indexedStack(children: navigationList, index: myIndex,) sunod kung kayo na ang map
@@ -49,7 +57,11 @@ class _HomePageState extends State<HomePage> {
         animationDuration: const Duration(milliseconds: 400),
         color: const Color(0xFF5BABCD),
         items: const [
-          Icon(Icons.home, size: 30, color: Colors.white,),
+          Icon(
+            Icons.home,
+            size: 30,
+            color: Colors.white,
+          ),
           Icon(Icons.devices, size: 30, color: Colors.white),
           Icon(Icons.account_circle, size: 30, color: Colors.white),
         ],
@@ -58,7 +70,7 @@ class _HomePageState extends State<HomePage> {
             myIndex = index;
           });
         },
-          ),
+      ),
     );
   }
 }

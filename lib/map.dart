@@ -5,14 +5,14 @@ import 'package:location/location.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MapPage extends StatefulWidget {
-  const MapPage({Key? key}) : super(key: key);
+  const MapPage({super.key});
 
   @override
   State<MapPage> createState() => _MapPageState();
 }
 
 class _MapPageState extends State<MapPage> {
-  Location _locationController = Location();
+  final Location _locationController = Location();
   final Completer<GoogleMapController> _mapController = Completer<GoogleMapController>();
 
   LatLng? _currentP;
