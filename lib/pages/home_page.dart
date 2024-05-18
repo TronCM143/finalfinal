@@ -1,27 +1,17 @@
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:mapa/components/auth_page.dart';
 import 'package:mapa/pages/profile_pdage.dart';
 
 import '../map.dart';
 import 'devices_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  HomePage({super.key});
 
+  final user = FirebaseAuth.instance.currentUser;
   @override
   State<HomePage> createState() => _HomePageState();
-}
-
-void signUserOut(BuildContext context) {
-  FirebaseAuth.instance.signOut();
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(
-        builder: (context) =>
-            AuthPage()), // Replace AuthPage with your actual authentication page
-  );
 }
 
 class _HomePageState extends State<HomePage> {

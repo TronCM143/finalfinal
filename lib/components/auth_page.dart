@@ -5,7 +5,7 @@ import 'login_or_register_page.dart';
 
 
 class AuthPage extends StatelessWidget {
-  const AuthPage({super.key});
+  const AuthPage({super.key});  
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +20,7 @@ class AuthPage extends StatelessWidget {
                 style: TextStyle(
                   color: Colors.black,
                   fontSize: 20,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w900, 
                   fontFamily: 'Montserrat'
                 ),),
               ),
@@ -28,7 +28,7 @@ class AuthPage extends StatelessWidget {
           }
           else if(snapshot.hasData) {
             //if logged in
-            return const HomePage();
+            return HomePage();
           } else {
             //no account
             return const LoginOrRegisterPage();

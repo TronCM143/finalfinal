@@ -85,9 +85,9 @@ class _SignUpPageWidgetState extends State<SignUpPageWidget> {
               borderRadius: BorderRadius.circular(8),
               child: Image.asset(
                 'assets/logo_with_name2.png',
-                width: 300,
-                height: 150,
-                fit: BoxFit.cover,
+                    width: 350,
+                    height: 160,
+                    fit: BoxFit.fill,
               ),
             ),
           ),

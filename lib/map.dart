@@ -9,7 +9,7 @@ import 'services/location_service.dart';
 import 'device_info_util.dart';
 
 class MapPage extends StatefulWidget {
-  const MapPage({Key? key}) : super(key: key);
+  const MapPage({super.key});
 
   @override
   State<MapPage> createState() => _MapPageState();
@@ -51,7 +51,7 @@ class _MapPageState extends State<MapPage> {
         onPressed: () {
           _showDeviceInfoDialog();
         },
-        child: Icon(Icons.info),
+        child: const Icon(Icons.info),
       ),
       body: Column(
         children: [
