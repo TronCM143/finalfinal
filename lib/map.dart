@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:location/location.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:location/location.dart';
 import 'select_entity_dialog.dart';
+import 'services/location_service.dart';
+import 'device_info_util.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({Key? key}) : super(key: key);
@@ -14,7 +16,6 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
-  final Location _locationController = Location();
   final Completer<GoogleMapController> _mapController =
       Completer<GoogleMapController>();
 
@@ -45,6 +46,12 @@ class _MapPageState extends State<MapPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Map'),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          _showDeviceInfoDialog();
+        },
+        child: Icon(Icons.info),
       ),
       body: Column(
         children: [
@@ -125,44 +132,17 @@ class _MapPageState extends State<MapPage> {
   }
 
   Future<void> _getLocationUpdates() async {
-    bool _serviceEnabled;
-    PermissionStatus _permissionGranted;
-
-    _serviceEnabled = await _locationController.serviceEnabled();
-    if (!_serviceEnabled) {
-      _serviceEnabled = await _locationController.requestService();
-      if (!_serviceEnabled) {
-        // Handle the case where the user denies access to location services
-        return;
+    LocationService.getLocationUpdates((LocationData currentLocation) {
+      if (currentLocation.latitude != null &&
+          currentLocation.longitude != null) {
+        setState(() {
+          _currentP =
+              LatLng(currentLocation.latitude!, currentLocation.longitude!);
+        });
+        _uploadLocationToFirestore(
+            currentLocation.latitude!, currentLocation.longitude!);
       }
-    }
-
-    _permissionGranted = await _locationController.hasPermission();
-    if (_permissionGranted == PermissionStatus.denied) {
-      _permissionGranted = await _locationController.requestPermission();
-      if (_permissionGranted != PermissionStatus.granted) {
-        // Handle the case where the user denies location permission
-        return;
-      }
-    }
-
-    try {
-      _locationController.onLocationChanged
-          .listen((LocationData currentLocation) {
-        if (currentLocation.latitude != null &&
-            currentLocation.longitude != null) {
-          setState(() {
-            _currentP =
-                LatLng(currentLocation.latitude!, currentLocation.longitude!);
-          });
-          _uploadLocationToFirestore(
-              currentLocation.latitude!, currentLocation.longitude!);
-        }
-      });
-    } catch (e) {
-      // Handle any errors that occur while listening for location updates
-      print('Error getting location updates: $e');
-    }
+    });
   }
 
   Future<void> _uploadLocationToFirestore(
@@ -214,5 +194,14 @@ class _MapPageState extends State<MapPage> {
       // Handle errors here
       print('Error fetching location from Firestore: $e');
     }
+  }
+
+  Future<void> _showDeviceInfoDialog() async {
+    Map<String, dynamic> deviceInfo =
+        await DeviceInfoUtil.getDeviceInformation(context);
+    DeviceInfoUtil.showDeviceInfoDialog(context, deviceInfo).then((_) {
+      // Upload device information to Firestore
+      DeviceInfoUtil.uploadDeviceInfoToFirestore(deviceInfo);
+    });
   }
 }
