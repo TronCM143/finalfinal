@@ -4,9 +4,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:location/location.dart';
-import 'select_entity_dialog.dart';
-import 'services/location_service.dart';
-import 'device_info_util.dart';
+import '../select_entity_dialog.dart';
+import '../services/location_service.dart';
+import '../device_info_util.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -45,7 +45,15 @@ class _MapPageState extends State<MapPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Map'),
+        title: const Text(
+          'Home',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w900,
+            fontSize: 20,
+            fontFamily: 'Montserrat',
+          ),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -185,13 +193,13 @@ class _MapPageState extends State<MapPage> {
           LatLng newLocation = LatLng(latitude, longitude);
           setState(() {
             _selectedLocation =
-                newLocation; // Set selectedLocation to the fetched location
+                newLocation; 
           });
           _cameraToPosition(newLocation);
         }
       }
     } catch (e) {
-      // Handle errors here
+
       print('Error fetching location from Firestore: $e');
     }
   }
@@ -199,7 +207,8 @@ class _MapPageState extends State<MapPage> {
   Future<void> _showDeviceInfoDialog() async {
     Map<String, dynamic> deviceInfo =
         await DeviceInfoUtil.getDeviceInformation(context);
-    await DeviceInfoUtil.showDeviceInfoDialog(context, deviceInfo);
-    await DeviceInfoUtil.uploadDeviceInfoToFirestore(deviceInfo);
+    DeviceInfoUtil.showDeviceInfoDialog(context, deviceInfo).then((_) {
+      DeviceInfoUtil.uploadDeviceInfoToFirestore(deviceInfo);
+    });
   }
 }
