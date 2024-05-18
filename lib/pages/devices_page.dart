@@ -10,6 +10,9 @@ class DevicesPage extends StatefulWidget {
 class _DevicesPageState extends State<DevicesPage> {
   @override
   Widget build(BuildContext context) {
-    return const Text('Devices Page');
+    return const Center(
+        child: Text(
+      'UNAVAILABLE FEATURE, WAIT FOR THE NEXT UPDATES.',
+    ));
   }
 }

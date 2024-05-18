@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'dart:math' show cos, sqrt, asin;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'select_entity_dialog.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({Key? key}) : super(key: key);
@@ -20,67 +21,53 @@ class _MapPageState extends State<MapPage> {
   LatLng? _currentP;
   List<DocumentSnapshot> _users = [];
   LatLng? _selectedLocation;
+  String? _userUid;
   static const LatLng _pGooglePlex =
       LatLng(6.485651218461966, 124.85593053388185);
-  double _distance = 0.0;
 
   @override
   void initState() {
     super.initState();
     _getLocationUpdates();
     _fetchUsersFromFirestore();
+    _getUserUid();
+  }
+
+  Future<void> _getUserUid() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    setState(() {
+      _userUid = user?.uid;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Map'),
+        title: const Text('Map'),
       ),
-      body: Stack(
+      body: Column(
         children: [
-          GoogleMap(
-            onMapCreated: (GoogleMapController controller) =>
-                _mapController.complete(controller),
-            initialCameraPosition: const CameraPosition(
-              target: _pGooglePlex,
-              zoom: 10,
+          if (_userUid != null)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text('User UID: $_userUid'),
             ),
-            markers: _buildMarkers(),
-            polylines: _buildPolylines(),
+          ElevatedButton(
+            onPressed: () {
+              _showEntityListDialog();
+            },
+            child: const Text('Select Device'),
           ),
-          if (_distance != 0)
-            Positioned(
-              top: 16.0,
-              right: 16.0,
-              child: Container(
-                padding: EdgeInsets.all(8.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.5),
-                      spreadRadius: 2,
-                      blurRadius: 5,
-                      offset: Offset(0, 2), // changes position of shadow
-                    ),
-                  ],
-                ),
-                child: Text(
-                  'Distance: $_distance meters',
-                  style: TextStyle(fontSize: 16.0),
-                ),
+          Expanded(
+            child: GoogleMap(
+              onMapCreated: (GoogleMapController controller) =>
+                  _mapController.complete(controller),
+              initialCameraPosition: const CameraPosition(
+                target: _pGooglePlex,
+                zoom: 10,
               ),
-            ),
-          Positioned(
-            bottom: 16.0,
-            left: 16.0,
-            child: ElevatedButton(
-              onPressed: () {
-                _showEntityListDialog();
-              },
-              child: Text('Select Entity'),
+              markers: _buildMarkers(),
             ),
           ),
         ],
@@ -115,39 +102,14 @@ class _MapPageState extends State<MapPage> {
     return markers;
   }
 
-  Set<Polyline> _buildPolylines() {
-    Set<Polyline> polylines = {};
-
-    if (_currentP != null && _selectedLocation != null) {
-      List<LatLng> polylineCoordinates = [
-        _currentP!,
-        _selectedLocation!,
-      ];
-
-      Polyline polyline = Polyline(
-        polylineId: PolylineId('poly'),
-        color: Colors.blue,
-        points: polylineCoordinates,
-        width: 3,
-        startCap: Cap.roundCap,
-        endCap: Cap.roundCap,
-      );
-
-      polylines.add(polyline);
-    }
-
-    return polylines;
-  }
-
   Future<void> _cameraToPosition(LatLng pos) async {
-    if (!_mapController.isCompleted) {
-      final GoogleMapController controller = await _mapController.future;
-      CameraPosition _newCameraPosition = CameraPosition(
-        target: pos,
-        zoom: 13,
-      );
-      await controller.animateCamera(CameraUpdate.newCameraPosition(_newCameraPosition));
-    }
+    final GoogleMapController controller = await _mapController.future;
+    CameraPosition _newCameraPosition = CameraPosition(
+      target: pos,
+      zoom: 13,
+    );
+    await controller
+        .animateCamera(CameraUpdate.newCameraPosition(_newCameraPosition));
   }
 
   Future<void> _fetchUsersFromFirestore() async {
@@ -195,7 +157,6 @@ class _MapPageState extends State<MapPage> {
           });
           _uploadLocationToFirestore(
               currentLocation.latitude!, currentLocation.longitude!);
-          _calculateDistance();
         }
       });
     } catch (e) {
@@ -207,13 +168,9 @@ class _MapPageState extends State<MapPage> {
   Future<void> _uploadLocationToFirestore(
       double latitude, double longitude) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc('current_location')
-          .set({
-        'latitude': latitude,
-        'longitude': longitude,
-      });
+      await FirebaseFirestore.instance.collection('users').doc(_userUid).set({
+        'location': GeoPoint(latitude, longitude),
+      }, SetOptions(merge: true));
       print('Location uploaded to Firestore');
     } catch (e) {
       // Handle errors here
@@ -225,21 +182,11 @@ class _MapPageState extends State<MapPage> {
     await showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Select Entity'),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: _users.map((user) {
-                return TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _fetchLocationFromFirestore(user.id);
-                  },
-                  child: Text(user.id),
-                );
-              }).toList(),
-            ),
-          ),
+        return SelectEntityDialog(
+          users: _users,
+          onEntitySelected: (uid) {
+            _fetchLocationFromFirestore(uid);
+          },
         );
       },
     );
@@ -250,9 +197,9 @@ class _MapPageState extends State<MapPage> {
       DocumentSnapshot docSnapshot =
           await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (docSnapshot.exists) {
-        var locationData = (docSnapshot.data()
-            as Map<String, dynamic>)['location'] as GeoPoint;
-        if (locationData != null) {
+        var data = docSnapshot.data() as Map<String, dynamic>;
+        if (data['location'] != null) {
+          var locationData = data['location'] as GeoPoint;
           double latitude = locationData.latitude;
           double longitude = locationData.longitude;
           LatLng newLocation = LatLng(latitude, longitude);
@@ -267,30 +214,5 @@ class _MapPageState extends State<MapPage> {
       // Handle errors here
       print('Error fetching location from Firestore: $e');
     }
-  }
-
-  // Calculate distance between two LatLng points
-  void _calculateDistance() {
-    if (_currentP != null && _selectedLocation != null) {
-      double distanceInMeters = _calculateDistanceInMeters(
-          _currentP!.latitude,
-          _currentP!.longitude,
-          _selectedLocation!.latitude,
-          _selectedLocation!.longitude);
-
-      setState(() {
-        _distance = distanceInMeters;
-      });
-    }
-  }
-
-  // Function to calculate distance between two LatLng points
-  double _calculateDistanceInMeters(
-      double lat1, double lon1, double lat2, double lon2) {
-    const double p = 0.017453292519943295; // Math.PI / 180
-    double a = 0.5 -
-        cos((lat2 - lat1) * p) / 2 +
-        cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lon2 - lon1) * p)) / 2;
-    return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
   }
 }
