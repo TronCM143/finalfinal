@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -9,6 +8,7 @@ class DeviceInfoUtil {
       BuildContext context) async {
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
     Map<String, dynamic> deviceData = {};
+
     try {
       if (Theme.of(context).platform == TargetPlatform.android) {
         AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
@@ -18,11 +18,17 @@ class DeviceInfoUtil {
           // Add more device information as needed
         };
       } else if (Theme.of(context).platform == TargetPlatform.iOS) {
-        // Add iOS device information retrieval here
+        IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
+        deviceData = {
+          'Device Name': iosInfo.name,
+          'Device Model': iosInfo.model,
+          // Add more device information as needed
+        };
       }
     } catch (e) {
       print('Failed to get device info: $e');
     }
+
     return deviceData;
   }
 

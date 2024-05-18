@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mapa/components/auth_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -30,6 +31,8 @@ class _ProfilePageState extends State<ProfilePage> {
           setState(() {
             _profilePictureUrl = googleUser.photoUrl;
           });
+          // Store email to Firestore
+          await _storeEmailToFirestore(currentUser.uid, currentUser.email!);
         }
       } else {
         setState(() {
@@ -39,8 +42,15 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  // Rest of the code remains the same
-
+  Future<void> _storeEmailToFirestore(String uid, String email) async {
+    try {
+      final userRef = FirebaseFirestore.instance.collection('users').doc(uid);
+      await userRef.set({'email': email}, SetOptions(merge: true));
+      print('Email stored to Firestore for user $uid');
+    } catch (e) {
+      print('Error storing email to Firestore: $e');
+    }
+  }
 
   Future<void> signUserOut(BuildContext context) async {
     try {
@@ -75,7 +85,7 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 CircleAvatar(
                   // Display profile picture or default icon based on the URL
-                  backgroundColor: Color(0xFF5BABCD),
+                  backgroundColor: const Color(0xFF5BABCD),
                   radius: 50,
                   child: _profilePictureUrl != null
                       ? ClipOval(

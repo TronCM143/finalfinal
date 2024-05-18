@@ -199,9 +199,7 @@ class _MapPageState extends State<MapPage> {
   Future<void> _showDeviceInfoDialog() async {
     Map<String, dynamic> deviceInfo =
         await DeviceInfoUtil.getDeviceInformation(context);
-    DeviceInfoUtil.showDeviceInfoDialog(context, deviceInfo).then((_) {
-      // Upload device information to Firestore
-      DeviceInfoUtil.uploadDeviceInfoToFirestore(deviceInfo);
-    });
+    await DeviceInfoUtil.showDeviceInfoDialog(context, deviceInfo);
+    await DeviceInfoUtil.uploadDeviceInfoToFirestore(deviceInfo);
   }
 }

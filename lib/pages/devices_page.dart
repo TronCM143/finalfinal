@@ -9,52 +9,66 @@ class DevicesPage extends StatefulWidget {
 }
 
 class _DevicesPageState extends State<DevicesPage> {
+  late Future<List<String>> _userEmailsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    print("Initializing DevicesPage...");
+    _userEmailsFuture = _getUserEmails();
+  }
+
+  Future<List<String>> _getUserEmails() async {
+    List<String> emails = [];
+    try {
+      QuerySnapshot snapshot =
+          await FirebaseFirestore.instance.collection('users').get();
+      List<String> uids = snapshot.docs.map((doc) => doc.id).toList();
+      print("User IDs: $uids");
+      for (String uid in uids) {
+        DocumentSnapshot userDoc =
+            await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        print("User Doc for UID $uid: ${userDoc.data()}");
+        Map<String, dynamic>? userData =
+            userDoc.data() as Map<String, dynamic>?;
+        if (userData != null && userData.containsKey('email')) {
+          emails.add(userData['email']);
+        }
+      }
+    } catch (e) {
+      print('Error fetching user emails: $e');
+    }
+    return emails;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Devices'),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('users').snapshots(),
+      body: FutureBuilder<List<String>>(
+        future: _userEmailsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
               child: CircularProgressIndicator(),
             );
-          }
-          if (snapshot.hasError) {
+          } else if (snapshot.hasError) {
             return Center(
               child: Text('Error: ${snapshot.error}'),
             );
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(
-              child: Text('No devices found'),
+          } else {
+            final List<String> userEmails = snapshot.data ?? [];
+            return ListView.builder(
+              itemCount: userEmails.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(userEmails[index]),
+                );
+              },
             );
           }
-          return ListView.builder(
-            itemCount: snapshot.data!.docs.length,
-            itemBuilder: (context, index) {
-              DocumentSnapshot device = snapshot.data!.docs[index];
-              Map<String, dynamic>? deviceInfo =
-                  device.data() as Map<String, dynamic>?; // Explicit cast
-              if (deviceInfo == null) {
-                return SizedBox.shrink();
-              }
-              return ListTile(
-                title: Text(device.id), // UID of the device
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Device Name: ${deviceInfo['Device Name'] ?? 'null'}'),
-                    Text(
-                        'Device Model: ${deviceInfo['Device Model'] ?? 'null'}'),
-                  ],
-                ),
-              );
-            },
-          );
         },
       ),
     );
