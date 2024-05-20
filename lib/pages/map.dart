@@ -7,7 +7,6 @@ import 'package:location/location.dart';
 import '../select_entity_dialog.dart';
 import '../services/location_service.dart';
 
-
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
 
@@ -16,16 +15,16 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
-  final Completer<GoogleMapController> _mapController =
-      Completer<GoogleMapController>();
+  final Completer<GoogleMapController> _mapController = Completer<GoogleMapController>();
 
   LatLng? _currentP;
   List<DocumentSnapshot> _users = [];
   LatLng? _selectedLocation;
   String? _userUid;
   String? _userEmail;
-  static const LatLng _pGooglePlex =
-      LatLng(6.485651218461966, 124.85593053388185);
+  static const LatLng _pGooglePlex = LatLng(6.485651218461966, 124.85593053388185);
+
+  StreamSubscription<DocumentSnapshot>? _locationSubscription;
 
   @override
   void initState() {
@@ -35,12 +34,17 @@ class _MapPageState extends State<MapPage> {
     _getUserUid();
   }
 
+  @override
+  void dispose() {
+    _locationSubscription?.cancel();
+    super.dispose();
+  }
+
   Future<void> _getUserUid() async {
     User? user = FirebaseAuth.instance.currentUser;
     setState(() {
       _userUid = user?.uid;
-      _userEmail =
-          user?.email; // Set the initial email to the current user's email
+      _userEmail = user?.email; // Set the initial email to the current user's email
     });
   }
 
@@ -73,8 +77,7 @@ class _MapPageState extends State<MapPage> {
           ),
           Expanded(
             child: GoogleMap(
-              onMapCreated: (GoogleMapController controller) =>
-                  _mapController.complete(controller),
+              onMapCreated: (GoogleMapController controller) => _mapController.complete(controller),
               initialCameraPosition: const CameraPosition(
                 target: _pGooglePlex,
                 zoom: 10,
@@ -94,8 +97,7 @@ class _MapPageState extends State<MapPage> {
       markers.add(
         Marker(
           markerId: const MarkerId("_currentLocation"),
-          icon:
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           position: _currentP!,
         ),
       );
@@ -120,14 +122,12 @@ class _MapPageState extends State<MapPage> {
       target: pos,
       zoom: 13,
     );
-    await controller
-        .animateCamera(CameraUpdate.newCameraPosition(_newCameraPosition));
+    await controller.animateCamera(CameraUpdate.newCameraPosition(_newCameraPosition));
   }
 
   Future<void> _fetchUsersFromFirestore() async {
     try {
-      QuerySnapshot querySnapshot =
-          await FirebaseFirestore.instance.collection('users').get();
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('users').get();
       setState(() {
         _users = querySnapshot.docs;
       });
@@ -138,20 +138,16 @@ class _MapPageState extends State<MapPage> {
 
   Future<void> _getLocationUpdates() async {
     LocationService.getLocationUpdates((LocationData currentLocation) {
-      if (currentLocation.latitude != null &&
-          currentLocation.longitude != null) {
+      if (currentLocation.latitude != null && currentLocation.longitude != null) {
         setState(() {
-          _currentP =
-              LatLng(currentLocation.latitude!, currentLocation.longitude!);
+          _currentP = LatLng(currentLocation.latitude!, currentLocation.longitude!);
         });
-        _uploadLocationToFirestore(
-            currentLocation.latitude!, currentLocation.longitude!);
+        _uploadLocationToFirestore(currentLocation.latitude!, currentLocation.longitude!);
       }
     });
   }
 
-  Future<void> _uploadLocationToFirestore(
-      double latitude, double longitude) async {
+  Future<void> _uploadLocationToFirestore(double latitude, double longitude) async {
     try {
       await FirebaseFirestore.instance.collection('users').doc(_userUid).set({
         'location': GeoPoint(latitude, longitude),
@@ -167,8 +163,7 @@ class _MapPageState extends State<MapPage> {
         .where((user) =>
             user.data() != null &&
             (user.data() as Map<String, dynamic>)['deviceInfo'] != null &&
-            (user.data() as Map<String, dynamic>)['deviceInfo']['email'] !=
-                null)
+            (user.data() as Map<String, dynamic>)['deviceInfo']['email'] != null)
         .toList();
 
     await showDialog(
@@ -177,8 +172,7 @@ class _MapPageState extends State<MapPage> {
         return SelectEntityDialog(
           users: userEmailDocs,
           onEntitySelected: (emailDoc) {
-            String email = (emailDoc.data()
-                as Map<String, dynamic>)['deviceInfo']['email'];
+            String email = (emailDoc.data() as Map<String, dynamic>)['deviceInfo']['email'];
             setState(() {
               _userEmail = email; // Update the displayed email
             });
@@ -196,17 +190,23 @@ class _MapPageState extends State<MapPage> {
           .where('deviceInfo.email', isEqualTo: email)
           .get();
       if (querySnapshot.docs.isNotEmpty) {
-        var user = querySnapshot.docs.first;
-        var locationData = user['location'] as GeoPoint?;
-        if (locationData != null) {
-          double latitude = locationData.latitude;
-          double longitude = locationData.longitude;
-          LatLng newLocation = LatLng(latitude, longitude);
-          setState(() {
-            _selectedLocation = newLocation;
-          });
-          _cameraToPosition(newLocation);
-        }
+        var userDoc = querySnapshot.docs.first;
+        _locationSubscription?.cancel(); // Cancel any previous subscription
+        _locationSubscription = userDoc.reference.snapshots().listen((snapshot) {
+          if (snapshot.exists) {
+            var locationData = snapshot['location'] as GeoPoint?;
+            if (locationData != null) {
+              double latitude = locationData.latitude;
+              double longitude = locationData.longitude;
+              LatLng newLocation = LatLng(latitude, longitude);
+              print('New location fetched: $newLocation'); // Debugging print statement
+              setState(() {
+                _selectedLocation = newLocation;
+              });
+              _cameraToPosition(newLocation);
+            }
+          }
+        });
       }
     } catch (e) {
       print('Error fetching location from Firestore: $e');
