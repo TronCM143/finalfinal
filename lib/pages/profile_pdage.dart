@@ -32,7 +32,8 @@ class _ProfilePageState extends State<ProfilePage> {
           setState(() {
             _profilePictureUrl = googleUser.photoUrl;
           });
-          await _storeEmailToFirestore(currentUser.uid, currentUser.email!);
+          await _storeProfilePictureToFirestore(
+              currentUser.uid, _profilePictureUrl);
         }
       } else {
         setState(() {
@@ -42,13 +43,15 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _storeEmailToFirestore(String uid, String email) async {
+  Future<void> _storeProfilePictureToFirestore(
+      String uid, String? profilePictureUrl) async {
     try {
       final userRef = FirebaseFirestore.instance.collection('users').doc(uid);
-      await userRef.set({'email': email}, SetOptions(merge: true));
-      print('Email stored to Firestore for user $uid');
+      await userRef.set(
+          {'profilePictureUrl': profilePictureUrl}, SetOptions(merge: true));
+      print('Profile picture URL stored to Firestore for user $uid');
     } catch (e) {
-      print('Error storing email to Firestore: $e');
+      print('Error storing profile picture URL to Firestore: $e');
     }
   }
 
@@ -203,7 +206,8 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                             Expanded(
                               child: Padding(
-                                padding: EdgeInsetsDirectional.fromSTEB(12, 0, 0, 0),
+                                padding:
+                                    EdgeInsetsDirectional.fromSTEB(12, 0, 0, 0),
                                 child: Text(
                                   'About us',
                                   style: TextStyle(

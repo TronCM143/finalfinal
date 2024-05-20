@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SelectEntityDialog extends StatelessWidget {
   final List<DocumentSnapshot> users;
-  final Function(String) onEntitySelected;
+  final Function(DocumentSnapshot) onEntitySelected;
 
   const SelectEntityDialog({
     Key? key,
@@ -14,16 +14,18 @@ class SelectEntityDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Select Entity'),
+      title: Text('Select Device'),
       content: SingleChildScrollView(
         child: ListBody(
           children: users.map((user) {
-            return TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                onEntitySelected(user.id);
+            String email =
+                (user.data() as Map<String, dynamic>)['deviceInfo']['email'];
+            return ListTile(
+              title: Text(email),
+              onTap: () {
+                Navigator.of(context).pop();
+                onEntitySelected(user);
               },
-              child: Text(user.id),
             );
           }).toList(),
         ),

@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:location/location.dart';
 import '../select_entity_dialog.dart';
 import '../services/location_service.dart';
-import '../device_info_util.dart';
+//import '../device_info_util.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -23,6 +23,7 @@ class _MapPageState extends State<MapPage> {
   List<DocumentSnapshot> _users = [];
   LatLng? _selectedLocation;
   String? _userUid;
+  String? _userEmail;
   static const LatLng _pGooglePlex =
       LatLng(6.485651218461966, 124.85593053388185);
 
@@ -38,6 +39,8 @@ class _MapPageState extends State<MapPage> {
     User? user = FirebaseAuth.instance.currentUser;
     setState(() {
       _userUid = user?.uid;
+      _userEmail =
+          user?.email; // Set the initial email to the current user's email
     });
   }
 
@@ -55,18 +58,12 @@ class _MapPageState extends State<MapPage> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _showDeviceInfoDialog();
-        },
-        child: const Icon(Icons.info),
-      ),
       body: Column(
         children: [
-          if (_userUid != null)
+          if (_userEmail != null)
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Text('User UID: $_userUid'),
+              child: Text('User Email: $_userEmail'),
             ),
           ElevatedButton(
             onPressed: () {
@@ -161,54 +158,58 @@ class _MapPageState extends State<MapPage> {
       }, SetOptions(merge: true));
       print('Location uploaded to Firestore');
     } catch (e) {
-      // Handle errors here
       print('Error uploading location to Firestore: $e');
     }
   }
 
   Future<void> _showEntityListDialog() async {
+    List<DocumentSnapshot> userEmailDocs = _users
+        .where((user) =>
+            user.data() != null &&
+            (user.data() as Map<String, dynamic>)['deviceInfo'] != null &&
+            (user.data() as Map<String, dynamic>)['deviceInfo']['email'] !=
+                null)
+        .toList();
+
     await showDialog(
       context: context,
       builder: (BuildContext context) {
         return SelectEntityDialog(
-          users: _users,
-          onEntitySelected: (uid) {
-            _fetchLocationFromFirestore(uid);
+          users: userEmailDocs,
+          onEntitySelected: (emailDoc) {
+            String email = (emailDoc.data()
+                as Map<String, dynamic>)['deviceInfo']['email'];
+            setState(() {
+              _userEmail = email; // Update the displayed email
+            });
+            _fetchLocationFromFirestore(email);
           },
         );
       },
     );
   }
 
-  Future<void> _fetchLocationFromFirestore(String uid) async {
+  Future<void> _fetchLocationFromFirestore(String email) async {
     try {
-      DocumentSnapshot docSnapshot =
-          await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (docSnapshot.exists) {
-        var data = docSnapshot.data() as Map<String, dynamic>;
-        if (data['location'] != null) {
-          var locationData = data['location'] as GeoPoint;
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('deviceInfo.email', isEqualTo: email)
+          .get();
+      if (querySnapshot.docs.isNotEmpty) {
+        var user = querySnapshot.docs.first;
+        var locationData = user['location'] as GeoPoint?;
+        if (locationData != null) {
           double latitude = locationData.latitude;
           double longitude = locationData.longitude;
           LatLng newLocation = LatLng(latitude, longitude);
           setState(() {
-            _selectedLocation =
-                newLocation; 
+            _selectedLocation = newLocation;
           });
           _cameraToPosition(newLocation);
         }
       }
     } catch (e) {
-
       print('Error fetching location from Firestore: $e');
     }
-  }
-
-  Future<void> _showDeviceInfoDialog() async {
-    Map<String, dynamic> deviceInfo =
-        await DeviceInfoUtil.getDeviceInformation(context);
-    DeviceInfoUtil.showDeviceInfoDialog(context, deviceInfo).then((_) {
-      DeviceInfoUtil.uploadDeviceInfoToFirestore(deviceInfo);
-    });
   }
 }
