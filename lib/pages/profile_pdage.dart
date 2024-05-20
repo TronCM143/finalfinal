@@ -132,7 +132,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           )
                         : const Icon(
                             Icons.account_circle,
-                            size: 100,
+                            size: 70,
                             color: Colors.white,
                           ),
                   ),

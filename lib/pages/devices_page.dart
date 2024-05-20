@@ -39,187 +39,191 @@ class _DevicesPageState extends State<DevicesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Users'),
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _usersStream,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(),
-            );
-          } else if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
-          } else {
-            final users = snapshot.data!.docs;
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: users.map((user) {
-                  var userData = user.data() as Map<String, dynamic>;
-                  var deviceInfo =
-                      userData['deviceInfo'] as Map<String, dynamic>?;
-
-                  OnlineStatus onlineStatus = (userData['online'] ?? false)
-                      ? OnlineStatus.online
-                      : OnlineStatus.offline;
-
-                  UserDeviceInfo userDeviceInfo = UserDeviceInfo(
-                    uid: user.id,
-                    email: userData['email'] ?? 'No Email',
-                    deviceInfo: deviceInfo,
-                    name: userData['name'],
-                    lastName: userData['lastName'],
-                    age: userData['age'],
-                    onlineStatus: onlineStatus,
-                  );
-
-                  String? profilePictureUrl = userData['profilePictureUrl'];
-
-                  return Container(
-                    margin:
-                        EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                    padding: EdgeInsets.all(16.0),
-                    decoration: BoxDecoration(
-                      color: Colors.lightBlue[100],
-                      borderRadius: BorderRadius.circular(8.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          spreadRadius: 1,
-                          blurRadius: 3,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    width: 300,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundImage: profilePictureUrl != null
-                                  ? NetworkImage(profilePictureUrl)
-                                  : AssetImage('assets/placeholder_image.jpg')
-                                      as ImageProvider,
-                            ),
-                            SizedBox(width: 20),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Email:',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  Text(
-                                    userDeviceInfo.email,
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
+    return SafeArea(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Users'),
+        ),
+        body: SingleChildScrollView(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: _usersStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(
+                  child: CircularProgressIndicator(),
+                );
+              } else if (snapshot.hasError) {
+                return Center(
+                  child: Text('Error: ${snapshot.error}'),
+                );
+              } else {
+                final users = snapshot.data!.docs;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: users.map((user) {
+                      var userData = user.data() as Map<String, dynamic>;
+                      var deviceInfo =
+                          userData['deviceInfo'] as Map<String, dynamic>?;
+                
+                      OnlineStatus onlineStatus = (userData['online'] ?? false)
+                          ? OnlineStatus.online
+                          : OnlineStatus.offline;
+                
+                      UserDeviceInfo userDeviceInfo = UserDeviceInfo(
+                        uid: user.id,
+                        email: userData['email'] ?? 'No Email',
+                        deviceInfo: deviceInfo,
+                        name: userData['name'],
+                        lastName: userData['lastName'],
+                        age: userData['age'],
+                        onlineStatus: onlineStatus,
+                      );
+                
+                      String? profilePictureUrl = userData['profilePictureUrl'];
+                
+                      return Container(
+                        margin:
+                            EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                        padding: EdgeInsets.all(16.0),
+                        decoration: BoxDecoration(
+                          color: Colors.lightBlue[100],
+                          borderRadius: BorderRadius.circular(8.0),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.5),
+                              spreadRadius: 1,
+                              blurRadius: 3,
+                              offset: Offset(0, 2),
                             ),
                           ],
                         ),
-                        SizedBox(height: 10),
-                        Text(
-                          'UID: ${userDeviceInfo.uid}',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 10),
-                        if (userDeviceInfo.deviceInfo != null) ...[
-                          Text(
-                            'Device Information:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(height: 5),
-                          ...userDeviceInfo.deviceInfo!.entries.map((entry) {
-                            if (entry.key != 'email') {
-                              return Padding(
-                                padding: const EdgeInsets.only(left: 16.0),
-                                child: Text(
-                                    '${entry.key}: ${entry.value ?? 'Unknown'}'),
-                              );
-                            } else {
-                              return SizedBox
-                                  .shrink(); // Hide email from device information
-                            }
-                          }),
-                        ],
-                        SizedBox(height: 10),
-                        if (userDeviceInfo.name != null ||
-                            userDeviceInfo.lastName != null ||
-                            userDeviceInfo.age != null) ...[
-                          Text(
-                            'Personal Information:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          if (userDeviceInfo.name != null)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 16.0),
-                              child: Text('Name: ${userDeviceInfo.name}'),
-                            ),
-                          if (userDeviceInfo.lastName != null)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 16.0),
-                              child:
-                                  Text('Last Name: ${userDeviceInfo.lastName}'),
-                            ),
-                          if (userDeviceInfo.age != null)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 16.0),
-                              child: Text('Age: ${userDeviceInfo.age}'),
-                            ),
-                        ],
-                        SizedBox(height: 10),
-                        Row(
+                        width: 300,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              userDeviceInfo.onlineStatus == OnlineStatus.online
-                                  ? Icons.circle
-                                  : Icons.circle,
-                              color: userDeviceInfo.onlineStatus ==
-                                      OnlineStatus.online
-                                  ? Colors.green
-                                  : Colors.black,
-                              size: 12,
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundImage: profilePictureUrl != null
+                                      ? NetworkImage(profilePictureUrl)
+                                      : AssetImage('assets/placeholder_image.jpg')
+                                          as ImageProvider,
+                                ),
+                                SizedBox(width: 20),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Email:',
+                                        style:
+                                            TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(
+                                        userDeviceInfo.email,
+                                        style:
+                                            TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                            SizedBox(width: 5),
+                            SizedBox(height: 10),
                             Text(
-                              userDeviceInfo.onlineStatus == OnlineStatus.online
-                                  ? 'Online'
-                                  : 'Offline',
-                              style: TextStyle(
-                                color: userDeviceInfo.onlineStatus ==
-                                        OnlineStatus.online
-                                    ? Colors.green
-                                    : Colors.black,
+                              'UID: ${userDeviceInfo.uid}',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            SizedBox(height: 10),
+                            if (userDeviceInfo.deviceInfo != null) ...[
+                              Text(
+                                'Device Information:',
+                                style: TextStyle(fontWeight: FontWeight.bold),
                               ),
+                              SizedBox(height: 5),
+                              ...userDeviceInfo.deviceInfo!.entries.map((entry) {
+                                if (entry.key != 'email') {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(left: 16.0),
+                                    child: Text(
+                                        '${entry.key}: ${entry.value ?? 'Unknown'}'),
+                                  );
+                                } else {
+                                  return SizedBox
+                                      .shrink(); // Hide email from device information
+                                }
+                              }),
+                            ],
+                            SizedBox(height: 10),
+                            if (userDeviceInfo.name != null ||
+                                userDeviceInfo.lastName != null ||
+                                userDeviceInfo.age != null) ...[
+                              Text(
+                                'Personal Information:',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              if (userDeviceInfo.name != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 16.0),
+                                  child: Text('Name: ${userDeviceInfo.name}'),
+                                ),
+                              if (userDeviceInfo.lastName != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 16.0),
+                                  child:
+                                      Text('Last Name: ${userDeviceInfo.lastName}'),
+                                ),
+                              if (userDeviceInfo.age != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 16.0),
+                                  child: Text('Age: ${userDeviceInfo.age}'),
+                                ),
+                            ],
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Icon(
+                                  userDeviceInfo.onlineStatus == OnlineStatus.online
+                                      ? Icons.circle
+                                      : Icons.circle,
+                                  color: userDeviceInfo.onlineStatus ==
+                                          OnlineStatus.online
+                                      ? Colors.green
+                                      : Colors.black,
+                                  size: 12,
+                                ),
+                                SizedBox(width: 5),
+                                Text(
+                                  userDeviceInfo.onlineStatus == OnlineStatus.online
+                                      ? 'Online'
+                                      : 'Offline',
+                                  style: TextStyle(
+                                    color: userDeviceInfo.onlineStatus ==
+                                            OnlineStatus.online
+                                        ? Colors.green
+                                        : Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 10),
+                            ElevatedButton(
+                              onPressed: () {
+                                _showEditDialog(context, userDeviceInfo);
+                              },
+                              child: Text('Edit'),
                             ),
                           ],
                         ),
-                        SizedBox(height: 10),
-                        ElevatedButton(
-                          onPressed: () {
-                            _showEditDialog(context, userDeviceInfo);
-                          },
-                          child: Text('Edit'),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            );
-          }
-        },
+                      );
+                    }).toList(),
+                  ),
+                );
+              }
+            },
+          ),
+        ),
       ),
     );
   }
