@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:location/location.dart';
 import '../select_entity_dialog.dart';
 import '../services/location_service.dart';
-//import '../device_info_util.dart';
+
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
